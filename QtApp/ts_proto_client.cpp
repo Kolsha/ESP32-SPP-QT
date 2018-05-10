@@ -1,5 +1,5 @@
 
-#include "chatclient.h"
+#include "ts_proto_client.h"
 
 #include <qbluetoothsocket.h>
 #include <qbytearray.h>
@@ -12,7 +12,7 @@
 
 
 
-void ChatClient::syncTime()
+void tsProtoClient::syncTime()
 {
     m_timeIsSynchronized = false;
 
@@ -43,7 +43,7 @@ void ChatClient::syncTime()
     socket->write(ts_msg);
 }
 
-void ChatClient::initTimer()
+void tsProtoClient::initTimer()
 {
     m_timeIsSynchronized = false;
     m_syncTimer = new QTimer(this);
@@ -51,11 +51,12 @@ void ChatClient::initTimer()
         return ;
     }
     connect(m_syncTimer, SIGNAL(timeout()), this, SLOT(syncTime()));
-    m_syncTimer->setInterval(1000);
+    m_syncTimer->setInterval(5000);
     m_syncTimer->start();
+    syncTime();
 }
 
-void ChatClient::freeTimer()
+void tsProtoClient::freeTimer()
 {
     m_timeIsSynchronized = false;
     if(m_syncTimer){
@@ -68,19 +69,20 @@ void ChatClient::freeTimer()
     }
 }
 
-ChatClient::ChatClient(QObject *parent)
+tsProtoClient::tsProtoClient(QObject *parent)
     :   QObject(parent), socket(0)
 {
     m_lastMsgTS = {0, 0};
+    m_maxdT = std::unique_ptr<AverageBuffer<uint32_t>>(new AverageBuffer<uint32_t>(30, 100));
 }
 
-ChatClient::~ChatClient()
+tsProtoClient::~tsProtoClient()
 {
     stopClient();
 }
 
 
-void ChatClient::startClient(const QBluetoothServiceInfo &remoteService)
+void tsProtoClient::startClient(const QBluetoothServiceInfo &remoteService)
 {
     if (socket)
         return;
@@ -99,7 +101,7 @@ void ChatClient::startClient(const QBluetoothServiceInfo &remoteService)
 }
 
 
-void ChatClient::stopClient()
+void tsProtoClient::stopClient()
 {
     delete socket;
     socket = 0;
@@ -108,17 +110,17 @@ void ChatClient::stopClient()
 }
 
 
-void ChatClient::readSocket()
+void tsProtoClient::readSocket()
 {
     if (!socket)
         return;
 
-    //qDebug() << "readSocket";
-
+    tsTime_t curTime = get_ts_time();
 
     while (socket->bytesAvailable() > 0) {
-        emit messageReceived(socket->peerName(),
+        /*emit messageReceived(socket->peerName(),
                              QString("----------------------------------"));
+                             */
         QByteArray line = socket->readAll();
         for(size_t pos = 0; pos < (line.length() / sizeof(tsMsg_t)); pos++){
 
@@ -144,10 +146,15 @@ void ChatClient::readSocket()
                 continue;
             }
 
-            uint32_t dt = get_ts_delta_time(&(msg->timestamp), &m_lastMsgTS);
-            if(dt > MAX_dT){
 
-                qDebug() << "Skip msg: " << (char*)msg->data << "cause dT exceeded " << dt;
+
+            uint32_t dt = get_ts_delta_time(&curTime, &(msg->timestamp));
+            m_maxdT->put(dt);
+            uint32_t maxdT = m_maxdT->getAverage() * 1.5;
+            if(dt > maxdT){
+
+                qDebug() << "Skip msg: " << (char*)msg->data <<
+                            "cause dT exceeded " << maxdT << " - " << dt;
 
                 qDebug() << msg->timestamp.tv_sec << '.' << msg->timestamp.tv_usec;
                 qDebug() << m_lastMsgTS.tv_sec << '.' << m_lastMsgTS.tv_usec;
@@ -168,20 +175,20 @@ void ChatClient::readSocket()
 }
 
 
-void ChatClient::sendMessage(const QString &message)
+void tsProtoClient::sendMessage(const QString &message)
 {
     QByteArray text = message.toUtf8() + '\n';
     socket->write(text);
 }
 
 
-void ChatClient::connected()
+void tsProtoClient::connected()
 {
     initTimer();
     emit connected(socket->peerName());
 }
 
-void ChatClient::m_disconnected()
+void tsProtoClient::m_disconnected()
 {
     freeTimer();
     emit disconnected();

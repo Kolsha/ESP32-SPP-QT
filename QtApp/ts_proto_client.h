@@ -38,50 +38,64 @@
 **
 ****************************************************************************/
 
-#ifndef CHATSERVER_H
-#define CHATSERVER_H
+#ifndef TS_PROTO_CLIENT_H
+#define TS_PROTO_CLIENT_H
 
 #include <qbluetoothserviceinfo.h>
-#include <qbluetoothaddress.h>
 
 #include <QtCore/QObject>
-#include <QtCore/QList>
+#include <QTimer>
 
-QT_FORWARD_DECLARE_CLASS(QBluetoothServer)
+#include "ts_proto.h"
+
+#include "average_buffer.h"
+
+
 QT_FORWARD_DECLARE_CLASS(QBluetoothSocket)
 
 QT_USE_NAMESPACE
 
-//! [declaration]
-class ChatServer : public QObject
+
+class tsProtoClient : public QObject
 {
     Q_OBJECT
+private:
+    QTimer *m_syncTimer = 0;
+
+    std::unique_ptr<AverageBuffer<uint32_t>> m_maxdT;
+    void initTimer();
+    void freeTimer();
+    bool m_timeIsSynchronized = false;
+
+    tsTime_t m_lastMsgTS;
+
+    const uint64_t MAX_dT = 50; //ms
 
 public:
-    explicit ChatServer(QObject *parent = 0);
-    ~ChatServer();
+    explicit tsProtoClient(QObject *parent = 0);
+    ~tsProtoClient();
 
-    void startServer(const QBluetoothAddress &localAdapter = QBluetoothAddress());
-    void stopServer();
+    void startClient(const QBluetoothServiceInfo &remoteService);
+    void stopClient();
 
 public slots:
     void sendMessage(const QString &message);
 
 signals:
     void messageReceived(const QString &sender, const QString &message);
-    void clientConnected(const QString &name);
-    void clientDisconnected(const QString &name);
+    void connected(const QString &name);
+    void disconnected();
 
 private slots:
-    void clientConnected();
-    void clientDisconnected();
+    void syncTime();
     void readSocket();
+    void connected();
+    void m_disconnected();
+
 
 private:
-    QBluetoothServer *rfcommServer;
-    QBluetoothServiceInfo serviceInfo;
-    QList<QBluetoothSocket *> clientSockets;
+    QBluetoothSocket *socket;
 };
-//! [declaration]
 
-#endif // CHATSERVER_H
+
+#endif // CHATCLIENT_H

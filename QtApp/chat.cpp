@@ -40,8 +40,7 @@
 
 #include "chat.h"
 #include "remoteselector.h"
-#include "chatserver.h"
-#include "chatclient.h"
+#include "ts_proto_client.h"
 
 #include <qbluetoothuuid.h>
 #include <qbluetoothserver.h>
@@ -53,6 +52,7 @@
 
 #include <QDebug>
 
+// this Uuid is hardcoded in ESP32
 static const QLatin1String serviceUuid("00001101-0000-1000-8000-00805f9b34fb");
 
 Chat::Chat(QWidget *parent)
@@ -82,29 +82,20 @@ Chat::Chat(QWidget *parent)
         adapter.setHostMode(QBluetoothLocalDevice::HostDiscoverable);
     }
 
-    //! [Create Chat Server]
-    server = new ChatServer(this);
-    connect(server, SIGNAL(clientConnected(QString)), this, SLOT(clientConnected(QString)));
-    connect(server, SIGNAL(clientDisconnected(QString)), this, SLOT(clientDisconnected(QString)));
-    connect(server, SIGNAL(messageReceived(QString,QString)),
-            this, SLOT(showMessage(QString,QString)));
-    connect(this, SIGNAL(sendMessage(QString)), server, SLOT(sendMessage(QString)));
-    server->startServer();
-    //! [Create Chat Server]
 
 
-    //! [Get local device name]
+
     localName = QBluetoothLocalDevice().name();
-    //! [Get local device name]
+
 }
 
 Chat::~Chat()
 {
     qDeleteAll(clients);
-    delete server;
+
 }
 
-//! [clientConnected clientDisconnected]
+
 void Chat::clientConnected(const QString &name)
 {
     ui->chat->insertPlainText(QString::fromLatin1("%1 has joined chat.\n").arg(name));
@@ -114,9 +105,8 @@ void Chat::clientDisconnected(const QString &name)
 {
     ui->chat->insertPlainText(QString::fromLatin1("%1 has left.\n").arg(name));
 }
-//! [clientConnected clientDisconnected]
 
-//! [connected]
+
 void Chat::connected(const QString &name)
 {
     ui->chat->insertPlainText(QString::fromLatin1("Joined chat with %1.\n").arg(name));
@@ -126,12 +116,11 @@ void Chat::newAdapterSelected()
 {
     const int newAdapterIndex = adapterFromUserSelection();
     if (currentAdapterIndex != newAdapterIndex) {
-        server->stopServer();
+
         currentAdapterIndex = newAdapterIndex;
         const QBluetoothHostInfo info = localAdapters.at(currentAdapterIndex);
         QBluetoothLocalDevice adapter(info.address());
         adapter.setHostMode(QBluetoothLocalDevice::HostDiscoverable);
-        server->startServer(info.address());
         localName = info.name();
     }
 }
@@ -147,20 +136,19 @@ int Chat::adapterFromUserSelection() const
     }
     return result;
 }
-//! [connected]
 
-//! [clientDisconnected]
+
 void Chat::clientDisconnected()
 {
-    ChatClient *client = qobject_cast<ChatClient *>(sender());
+    tsProtoClient *client = qobject_cast<tsProtoClient *>(sender());
     if (client) {
         clients.removeOne(client);
         client->deleteLater();
     }
 }
-//! [clientDisconnected]
 
-//! [Connect to remote service]
+
+
 void Chat::connectClicked()
 {
     ui->connectButton->setEnabled(false);
@@ -180,7 +168,7 @@ void Chat::connectClicked()
 
         // Create client
         qDebug() << "Going to create client";
-        ChatClient *client = new ChatClient(this);
+        tsProtoClient *client = new tsProtoClient(this);
 qDebug() << "Connecting...";
 
         connect(client, SIGNAL(messageReceived(QString,QString)),
@@ -196,9 +184,9 @@ qDebug() << "Start client";
 
     ui->connectButton->setEnabled(true);
 }
-//! [Connect to remote service]
 
-//! [sendClicked]
+
+
 void Chat::sendClicked()
 {
     ui->sendButton->setEnabled(false);
@@ -212,12 +200,13 @@ void Chat::sendClicked()
     ui->sendText->setEnabled(true);
     ui->sendButton->setEnabled(true);
 }
-//! [sendClicked]
 
-//! [showMessage]
+
+
+
 void Chat::showMessage(const QString &sender, const QString &message)
 {
     ui->chat->insertPlainText(QString::fromLatin1("%1: %2\n").arg(sender, message));
     ui->chat->ensureCursorVisible();
 }
-//! [showMessage]
+

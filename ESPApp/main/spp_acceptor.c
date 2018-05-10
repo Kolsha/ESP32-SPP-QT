@@ -3,6 +3,9 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
+
+#include <driver/gpio.h>
+
 #include "nvs.h"
 #include "nvs_flash.h"
 
@@ -42,6 +45,8 @@ uint32_t bt_handle = 0;
 
 static xQueueHandle msg_in_queue = NULL;
 
+static xQueueHandle btn_boot_queue = NULL ;
+
 
 
 
@@ -60,12 +65,12 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
         break;
     case ESP_SPP_OPEN_EVT:
         ESP_LOGI(SPP_TAG, "ESP_SPP_OPEN_EVT");
-        
-    
+
+
         break;
     case ESP_SPP_CLOSE_EVT:
         ESP_LOGI(SPP_TAG, "ESP_SPP_CLOSE_EVT");
-        if(param->close.handle == bt_handle){
+        if(param->close.handle == bt_handle) {
             bt_handle = 0;
         }
         break;
@@ -76,19 +81,19 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
         ESP_LOGI(SPP_TAG, "ESP_SPP_CL_INIT_EVT");
         break;
     case ESP_SPP_DATA_IND_EVT:
-        {
+    {
 
         /*ESP_LOGI(SPP_TAG, "ESP_SPP_DATA_IND_EVT len=%d handle=%d",
                  param->data_ind.len, param->data_ind.handle);
-*/
-        if(param->data_ind.data[0] != tsProto_Version){
+        */
+        if(param->data_ind.data[0] != tsProto_Version) {
             ESP_LOGI(SPP_TAG, "tsProto_Version mismatch");
             break;
         }
         tsMsg_t *msg_buff = (tsMsg_t *)malloc(param->data_ind.len * sizeof(uint8_t));
-        if(msg_buff == NULL){
-        	ESP_LOGE(SPP_TAG, "%s malloc failed\n", __func__);
-        	break;
+        if(msg_buff == NULL) {
+            ESP_LOGE(SPP_TAG, "%s malloc failed\n", __func__);
+            break;
         }
 
         memcpy(msg_buff, param->data_ind.data, param->data_ind.len);
@@ -100,7 +105,7 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
     }
 
         //esp_spp_write(param->data_ind.handle, SPP_DATA_LEN, spp_data);
-        break;
+    break;
     case ESP_SPP_CONG_EVT:
         //ESP_LOGI(SPP_TAG, "ESP_SPP_CONG_EVT");
         break;
@@ -111,9 +116,9 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
     case ESP_SPP_SRV_OPEN_EVT:
         ESP_LOGI(SPP_TAG, "ESP_SPP_SRV_OPEN_EVT");
         //ESP_LOGI(SPP_TAG, "HANDLE: %d", param->srv_open.handle);
-        if(!bt_handle){
+        if(!bt_handle) {
             bt_handle = param->srv_open.handle;
-        }else{
+        } else {
             //esp_spp_write(param->srv_open.handle, sizeof(SPP_BUSY_MSG), (uint8_t *)SPP_BUSY_MSG);
             esp_spp_disconnect(param->srv_open.handle);
         }
@@ -125,22 +130,22 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
 
 
 
-void app_send_msgs_t(tsMsg_t *msg, uint8_t count){
-    if(msg == NULL || count < 1){
+void app_send_msgs_t(tsMsg_t *msg, uint8_t count) {
+    if(msg == NULL || count < 1) {
         return;
     }
 
     esp_spp_write(bt_handle, sizeof(tsMsg_t) * count, (uint8_t *)msg);
 }
 
-void app_send_msg(tsProtoCmds_t cmd, uint8_t * data){
+void app_send_msg(tsProtoCmds_t cmd, uint8_t * data) {
     tsMsg_t msg = {
         .timestamp =  get_ts_time(),
         .cmd = cmd,
         .data = ""
     };
 
-    if(data != NULL){
+    if(data != NULL) {
         memcpy(msg.data, data, tsProto_MSG_DATA_LEN);
     }
 
@@ -154,7 +159,7 @@ void app_send_msg(tsProtoCmds_t cmd, uint8_t * data){
 
 
 
-void app_check_incoming_msg(){
+void app_check_incoming_msg() {
 
     tsMsg_t * msg = NULL;
     if(!xQueueReceive(msg_in_queue, &msg, 0)) {
@@ -171,35 +176,35 @@ void app_check_incoming_msg(){
     );
     */
 
-    switch(msg->cmd){
-        case timeSyncReq:
-        {
-            struct timeval tv;
-            gettimeofday(&tv, NULL);
+    switch(msg->cmd) {
+    case timeSyncReq:
+    {
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
 
-            //printf ("%ld.%06ld\n", tv.tv_sec, tv.tv_usec);
+        //printf ("%ld.%06ld\n", tv.tv_sec, tv.tv_usec);
 
-            tv.tv_sec = msg->timestamp.tv_sec;
-            tv.tv_usec = msg->timestamp.tv_usec;
+        tv.tv_sec = msg->timestamp.tv_sec;
+        tv.tv_usec = msg->timestamp.tv_usec;
 
-           if(settimeofday(&tv, NULL) != 0){
+        if(settimeofday(&tv, NULL) != 0) {
             break;
-           }
-           app_send_msg(timeSyncResponse, NULL);
-           //app_enqueue_msg(timeSyncResponse, NULL);
+        }
+        app_send_msg(timeSyncResponse, NULL);
+        //app_enqueue_msg(timeSyncResponse, NULL);
 
-       }
-
-
+    }
 
 
 
-        break;
-        default:
-            ESP_LOGI(
-                SPP_TAG,
-                "Unknown cmd"
-            );
+
+
+    break;
+    default:
+        ESP_LOGI(
+            SPP_TAG,
+            "Unknown cmd"
+        );
     }
 
     free(msg);
@@ -210,37 +215,85 @@ void app_check_incoming_msg(){
 
 
 
+
 void app_logic_task(void *pvParameters)
 {
 
-	
-    uint8_t info[tsProto_MSG_DATA_LEN] = {"hello pidor"};
-    uint32_t idx = 0;
-	for(;;){
-		vTaskDelay(10 / portTICK_PERIOD_MS);
 
-		if(!bt_handle){
+    uint8_t info[tsProto_MSG_DATA_LEN] = {"btn_boot"};
+    gpio_num_t gpio;
+
+    for(;;) {
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+
+        if(!bt_handle) {
             vTaskDelay(100 / portTICK_PERIOD_MS);
-			continue;
-		}
-        
+            continue;
+        }
+
         app_check_incoming_msg();
 
-        if((idx % 5) == 0){
-            tsTime_t tm = get_ts_time();
-            sprintf((char*)info, "%" PRIu64 ".%" PRIu64 "\n", tm.tv_sec, tm.tv_usec);
+        if(!!xQueueReceive(btn_boot_queue, &gpio, 1 / portTICK_PERIOD_MS)) {
+            //tsTime_t tm = get_ts_time();
+            //sprintf((char*)info, "%" PRIu64 ".%" PRIu64 "\n", tm.tv_sec, tm.tv_usec);
             app_send_msg(dataOut, info);
         }
-        
 
-        idx++;
-	}
+    }
+
+    vTaskDelete(NULL);
 
 }
 
 
 
 
+static void btn_boot_handler(void *args) {
+    gpio_num_t gpio;
+    gpio = GPIO_NUM_0;
+    xQueueSendToBackFromISR(btn_boot_queue, &gpio, NULL);
+}
+
+void init_btn_boot(void) {
+
+    ESP_LOGI(SPP_TAG, "init_btn_boot");
+
+    btn_boot_queue = xQueueCreate(10, sizeof(gpio_num_t));
+
+    if(btn_boot_queue == NULL) {
+        ESP_LOGE(SPP_TAG, "%s btn_boot_queue create failed\n", __func__);
+        return;
+    }
+
+
+    esp_err_t ret;
+
+
+    gpio_config_t gpioConfig;
+    gpioConfig.pin_bit_mask = GPIO_SEL_0;
+    gpioConfig.mode         = GPIO_MODE_INPUT;
+    gpioConfig.pull_up_en   = GPIO_PULLUP_DISABLE;
+    gpioConfig.pull_down_en = GPIO_PULLDOWN_ENABLE;
+    gpioConfig.intr_type    = GPIO_INTR_POSEDGE;
+
+    if((ret = gpio_config(&gpioConfig)) != ESP_OK) {
+        ESP_LOGE(SPP_TAG, "%s gpio_config failed: %s\n", __func__, esp_err_to_name(ret));
+        return;
+    }
+
+    if((ret = gpio_install_isr_service(0)) != ESP_OK) {
+        ESP_LOGE(SPP_TAG, "%s gpio_install_isr_service failed: %s\n", __func__, esp_err_to_name(ret));
+        return;
+    }
+
+    if((ret = gpio_isr_handler_add(GPIO_NUM_0, btn_boot_handler, NULL)) != ESP_OK) {
+        ESP_LOGE(SPP_TAG, "%s gpio_isr_handler_add failed: %s\n", __func__, esp_err_to_name(ret));
+        return;
+    }
+
+
+
+}
 
 
 void app_main()
@@ -286,15 +339,15 @@ void app_main()
     }
 
     msg_in_queue = xQueueCreate(MSG_IN_QUEUE_SIZE, sizeof(tsMsg_t *));
-    if(msg_in_queue == NULL){
+    if(msg_in_queue == NULL) {
         ESP_LOGE(SPP_TAG, "%s incoming queue create failed\n", __func__);
         return;
     }
 
 
 
+    init_btn_boot();
 
- 
 
     xTaskCreatePinnedToCore(&app_logic_task, "app_logic_task", 2048, NULL, 5, NULL, 1);
 

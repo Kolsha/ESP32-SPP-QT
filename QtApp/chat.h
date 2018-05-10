@@ -50,10 +50,9 @@
 
 QT_USE_NAMESPACE
 
-class ChatServer;
-class ChatClient;
+class tsProtoClient;
 
-//! [declaration]
+
 class Chat : public QDialog
 {
     Q_OBJECT
@@ -83,10 +82,11 @@ private:
     int currentAdapterIndex;
     Ui_Chat *ui;
 
-    ChatServer *server;
-    QList<ChatClient *> clients;
+    QList<tsProtoClient *> clients;
     QList<QBluetoothHostInfo> localAdapters;
 
     QString localName;
 };
-//! [declaration]
+
+
+

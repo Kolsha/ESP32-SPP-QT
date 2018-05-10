@@ -42,12 +42,31 @@
 
 #include <QApplication>
 
+
+
 //#include <QtCore/QLoggingCategory>
 
 #include "ts_proto.h"
 
+
+
+
+
 int main(int argc, char *argv[])
 {
+    /*
+
+    AverageBuffer<uint32_t> buff(4, 100);
+
+    buff.put(10);
+    buff.put(10);
+    buff.put(100);
+    qDebug() << buff.getAverage();
+
+
+    return 0;
+    */
+
 
     /*
     tsTime_t gr, ls;

@@ -1,5 +1,5 @@
 TEMPLATE = app
-TARGET = btchat
+#TARGET = btchat
 
 QT = core bluetooth widgets
 
@@ -9,16 +9,15 @@ SOURCES = \
     main.cpp \
     chat.cpp \
     remoteselector.cpp \
-    chatserver.cpp \
-    chatclient.cpp \
-    ts_proto.c
+    ts_proto.c \
+    ts_proto_client.cpp
 
 HEADERS = \
     chat.h \
     remoteselector.h \
-    chatserver.h \
-    chatclient.h \
-    ts_proto.h
+    ts_proto.h \
+    ts_proto_client.h \
+    average_buffer.h
 
 FORMS = \
     chat.ui \
