@@ -63,11 +63,15 @@ private:
     QTimer *m_syncTimer = 0;
 
     std::unique_ptr<AverageBuffer<uint32_t>> m_maxdT;
-    void initTimer();
-    void freeTimer();
+
+
     bool m_timeIsSynchronized = false;
 
     tsTime_t m_lastMsgTS;
+    uint32_t m_latency = 0;
+
+    void initTimer();
+    void freeTimer();
 
 public:
     explicit tsProtoClient(QObject *parent = 0);
@@ -83,6 +87,7 @@ signals:
     void messageReceived(const QString &sender, const QString &message);
     void connected(const QString &name);
     void disconnected();
+    void latencyChanged(const uint32_t latency);
 
 private slots:
     void syncTime();

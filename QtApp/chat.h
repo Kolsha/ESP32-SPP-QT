@@ -75,6 +75,8 @@ private slots:
     void clientDisconnected();
     void connected(const QString &name);
 
+    void showLatency(const uint32_t latency);
+
     void newAdapterSelected();
 
 private:

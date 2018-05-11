@@ -64,6 +64,7 @@ Chat::Chat(QWidget *parent)
     connect(ui->quitButton, SIGNAL(clicked()), this, SLOT(accept()));
     connect(ui->connectButton, SIGNAL(clicked()), this, SLOT(connectClicked()));
     connect(ui->sendButton, SIGNAL(clicked()), this, SLOT(sendClicked()));
+
     //! [Construct UI]
 
     localAdapters = QBluetoothLocalDevice::allDevices();
@@ -110,6 +111,11 @@ void Chat::clientDisconnected(const QString &name)
 void Chat::connected(const QString &name)
 {
     ui->chat->insertPlainText(QString::fromLatin1("Joined chat with %1.\n").arg(name));
+}
+
+void Chat::showLatency(const uint32_t latency)
+{
+    ui->quitButton->setText(QString("Latency: %1").arg(latency));
 }
 
 void Chat::newAdapterSelected()
@@ -173,6 +179,9 @@ qDebug() << "Connecting...";
 
         connect(client, SIGNAL(messageReceived(QString,QString)),
                 this, SLOT(showMessage(QString,QString)));
+
+        connect(client, SIGNAL(latencyChanged(uint32_t)),
+                this, SLOT(showLatency(uint32_t)));
         connect(client, SIGNAL(disconnected()), this, SLOT(clientDisconnected()));
         connect(client, SIGNAL(connected(QString)), this, SLOT(connected(QString)));
         connect(this, SIGNAL(sendMessage(QString)), client, SLOT(sendMessage(QString)));

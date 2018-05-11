@@ -150,9 +150,12 @@ void tsProtoClient::readSocket()
 
             uint32_t dt = get_ts_delta_time(&curTime, &(msg->timestamp));
             m_maxdT->put(dt);
-            uint32_t maxdT = m_maxdT->getAverage() * 1.5;
-            if(dt > maxdT){
+            m_latency = m_maxdT->getAverage();
+            emit latencyChanged(m_latency);
 
+            uint32_t maxdT = m_latency * 1.5;
+            if(dt > maxdT){
+                m_maxdT->put(dt * 10);
                 qDebug() << "Skip msg: " << (char*)msg->data <<
                             "cause dT exceeded " << maxdT << " - " << dt;
                 continue;
