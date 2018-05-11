@@ -34,7 +34,6 @@
 #define SPP_SERVER_NAME "SPP_SERVER"
 #define SPP_DEVICE_NAME "Kolsha_SPP#" __TIME__
 
-//#define SPP_BUSY_MSG "Go home, i'am busy now"
 
 static const esp_spp_mode_t esp_spp_mode = ESP_SPP_MODE_CB;
 static const esp_spp_sec_t sec_mask = ESP_SPP_SEC_NONE;

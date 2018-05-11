@@ -69,8 +69,6 @@ private:
 
     tsTime_t m_lastMsgTS;
 
-    const uint64_t MAX_dT = 50; //ms
-
 public:
     explicit tsProtoClient(QObject *parent = 0);
     ~tsProtoClient();

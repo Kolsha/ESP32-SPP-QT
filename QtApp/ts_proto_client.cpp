@@ -155,9 +155,6 @@ void tsProtoClient::readSocket()
 
                 qDebug() << "Skip msg: " << (char*)msg->data <<
                             "cause dT exceeded " << maxdT << " - " << dt;
-
-                qDebug() << msg->timestamp.tv_sec << '.' << msg->timestamp.tv_usec;
-                qDebug() << m_lastMsgTS.tv_sec << '.' << m_lastMsgTS.tv_usec;
                 continue;
             }
 
