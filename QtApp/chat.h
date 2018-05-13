@@ -98,8 +98,6 @@ private:
 
     QVector<cmdInfo> cmds;
 
-    //QMap<QString, QMap<QString, QString>> commands; // cmd, {addr, msg}
-    //QList<tsProtoClient *> clients;
     QList<QBluetoothHostInfo> localAdapters;
 
     QString localName;

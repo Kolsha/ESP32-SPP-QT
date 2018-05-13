@@ -63,7 +63,14 @@ Chat::Chat(QWidget *parent)
 
 Chat::~Chat()
 {
-    qDeleteAll(clients);
+    if(m_executeTimer){
+        if(m_executeTimer->isActive())
+            m_executeTimer->stop();
+        delete m_executeTimer;
+        m_executeTimer = 0;
+    }
+
+    clients.clear();
 
 }
 
@@ -74,7 +81,20 @@ void Chat::executeTime()
     }
 
     foreach (const cmdInfo &cmd, cmds) {
+        bool cond = true;
+        for (auto it = cmd.conds.begin(); it != cmd.conds.end(); ++it){
+            //qDebug() << it.key() << ": " << it.value() << endl;
+            auto msg = messages.find(it.key());
+            if(msg == messages.end() || msg.value() != it.value()){
+                cond = false;
+                break;
+            }
+        }
 
+        if(cond){
+            ui->chat->insertPlainText(QString::fromLatin1("%1 executed\n").arg(cmd.cmd));
+            ui->chat->ensureCursorVisible();
+        }
 
     }
 
@@ -87,6 +107,15 @@ void Chat::executeTime()
 void Chat::clientConnected(const QString &name, const QString &addr)
 {
     ui->chat->insertPlainText(QString::fromLatin1("Joined chat with %1.\n").arg(name));
+    tsProtoClient *client = qobject_cast<tsProtoClient *>(sender());
+    if (client) {
+        clients.insert(addr, client);
+    }
+
+    cmdInfo cmd;
+    cmd.cmd = "Test suka";
+    cmd.conds.insert(addr, "btn_boot");
+    cmds.push_back(cmd);
 }
 
 void Chat::showLatency(const uint32_t latency)
@@ -126,7 +155,6 @@ void Chat::clientDisconnected(const QString &addr)
     if (client) {
         Q_ASSERT(!addr.isEmpty());
         clients.remove(addr);
-        //clients.removeOne(client);
         client->deleteLater();
     }
 }
@@ -139,8 +167,8 @@ void Chat::connectClicked()
 
     // scan for services
     const QBluetoothAddress adapter = localAdapters.isEmpty() ?
-                                           QBluetoothAddress() :
-                                           localAdapters.at(currentAdapterIndex).address();
+                QBluetoothAddress() :
+                localAdapters.at(currentAdapterIndex).address();
 
     RemoteSelector remoteSelector(adapter);
     remoteSelector.startDiscovery(QBluetoothUuid(serviceUuid));
@@ -153,7 +181,7 @@ void Chat::connectClicked()
         // Create client
         qDebug() << "Going to create client";
         tsProtoClient *client = new tsProtoClient(this);
-qDebug() << "Connecting...";
+        qDebug() << "Connecting...";
 
         connect(client, SIGNAL(messageReceived(QString,QString)),
                 this, SLOT(showMessage(QString,QString)));
@@ -166,7 +194,7 @@ qDebug() << "Connecting...";
         connect(client, SIGNAL(connected(QString, QString)), this, SLOT(clientConnected(QString, QString)));
 
         connect(this, SIGNAL(sendMessage(QString)), client, SLOT(sendMessage(QString)));
-qDebug() << "Start client";
+        qDebug() << "Start client";
 
         client->startClient(service);
 
@@ -198,8 +226,5 @@ void Chat::sendClicked()
 void Chat::showMessage(const QString &sender, const QString &message)
 {
     messages.insert(sender, message);
-
-    ui->chat->insertPlainText(QString::fromLatin1("%1: %2\n").arg(sender, message));
-    ui->chat->ensureCursorVisible();
 }
 

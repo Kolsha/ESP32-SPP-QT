@@ -177,8 +177,9 @@ void tsProtoClient::m_readyRead()
             m_lastMsgTS = msg->timestamp;
 
             if(msg->cmd == dataOut){
+
                 emit messageReceived(socket->peerAddress().toString(),
-                                     QString::fromUtf8((char*)msg->data, tsProto_MSG_DATA_LEN));
+                                     QString::fromUtf8((char*)msg->data, strlen((char*)msg->data)));
             }
 
         }
