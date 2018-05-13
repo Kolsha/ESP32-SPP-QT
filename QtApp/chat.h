@@ -52,6 +52,12 @@ QT_USE_NAMESPACE
 
 class tsProtoClient;
 
+struct cmdInfo
+{
+    QString cmd;
+    QMap<QString, QString> conds; // addr, msg
+};
+
 
 class Chat : public QDialog
 {
@@ -65,15 +71,17 @@ signals:
     void sendMessage(const QString &message);
 
 private slots:
+
+    void executeTime();
+
     void connectClicked();
     void sendClicked();
 
     void showMessage(const QString &sender, const QString &message);
 
-    void clientConnected(const QString &name);
-    void clientDisconnected(const QString &name);
-    void clientDisconnected();
-    void connected(const QString &name);
+
+    void clientDisconnected(const QString &addr);
+    void clientConnected(const QString &name, const QString &addr);
 
     void showLatency(const uint32_t latency);
 
@@ -84,10 +92,19 @@ private:
     int currentAdapterIndex;
     Ui_Chat *ui;
 
-    QList<tsProtoClient *> clients;
+    QMap<QString, tsProtoClient*> clients; //addr client
+
+    QMap<QString, QString> messages; // addr, message
+
+    QVector<cmdInfo> cmds;
+
+    //QMap<QString, QMap<QString, QString>> commands; // cmd, {addr, msg}
+    //QList<tsProtoClient *> clients;
     QList<QBluetoothHostInfo> localAdapters;
 
     QString localName;
+
+    QTimer *m_executeTimer = 0;
 };
 
 

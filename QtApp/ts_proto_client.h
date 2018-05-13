@@ -73,6 +73,9 @@ private:
     void initTimer();
     void freeTimer();
 
+    QString m_name;
+    QString m_addr;
+
 public:
     explicit tsProtoClient(QObject *parent = 0);
     ~tsProtoClient();
@@ -80,19 +83,22 @@ public:
     void startClient(const QBluetoothServiceInfo &remoteService);
     void stopClient();
 
+    QString getName() const;
+    QString getAddr() const;
+
 public slots:
     void sendMessage(const QString &message);
 
 signals:
     void messageReceived(const QString &sender, const QString &message);
-    void connected(const QString &name);
-    void disconnected();
+    void connected(const QString &name, const QString &addr);
+    void disconnected(const QString &addr);
     void latencyChanged(const uint32_t latency);
 
 private slots:
     void syncTime();
-    void readSocket();
-    void connected();
+    void m_readyRead();
+    void m_connected();
     void m_disconnected();
 
 

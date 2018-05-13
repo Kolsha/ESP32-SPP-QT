@@ -93,8 +93,8 @@ void tsProtoClient::startClient(const QBluetoothServiceInfo &remoteService)
     socket->connectToService(remoteService);
     qDebug() << "ConnectToService done";
 
-    connect(socket, SIGNAL(readyRead()), this, SLOT(readSocket()));
-    connect(socket, SIGNAL(connected()), this, SLOT(connected()));
+    connect(socket, SIGNAL(readyRead()), this, SLOT(m_readyRead()));
+    connect(socket, SIGNAL(connected()), this, SLOT(m_connected()));
     connect(socket, SIGNAL(disconnected()), this, SLOT(m_disconnected()));
 
     qDebug() << "Signaling done";
@@ -103,14 +103,27 @@ void tsProtoClient::startClient(const QBluetoothServiceInfo &remoteService)
 
 void tsProtoClient::stopClient()
 {
+    if(socket && socket->isOpen()){
+        socket->close();
+    }
     delete socket;
     socket = 0;
 
     freeTimer();
 }
 
+QString tsProtoClient::getName() const
+{
+    return m_name;
+}
 
-void tsProtoClient::readSocket()
+QString tsProtoClient::getAddr() const
+{
+    return m_addr;
+}
+
+
+void tsProtoClient::m_readyRead()
 {
     if (!socket)
         return;
@@ -164,7 +177,7 @@ void tsProtoClient::readSocket()
             m_lastMsgTS = msg->timestamp;
 
             if(msg->cmd == dataOut){
-                emit messageReceived(socket->peerName(),
+                emit messageReceived(socket->peerAddress().toString(),
                                      QString::fromUtf8((char*)msg->data, tsProto_MSG_DATA_LEN));
             }
 
@@ -182,15 +195,17 @@ void tsProtoClient::sendMessage(const QString &message)
 }
 
 
-void tsProtoClient::connected()
+void tsProtoClient::m_connected()
 {
     initTimer();
-    emit connected(socket->peerName());
+    m_name = socket->peerName();
+    m_addr = socket->peerAddress().toString();
+    emit connected(m_name, m_addr);
 }
 
 void tsProtoClient::m_disconnected()
 {
     freeTimer();
-    emit disconnected();
+    emit disconnected(socket->peerAddress().toString());
 }
 
