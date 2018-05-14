@@ -131,19 +131,17 @@ void tsProtoClient::m_readyRead()
     tsTime_t curTime = get_ts_time();
 
     while (socket->bytesAvailable() > 0) {
-        /*emit messageReceived(socket->peerName(),
-                             QString("----------------------------------"));
-                             */
+
         QByteArray line = socket->readAll();
         for(size_t pos = 0; pos < (line.length() / sizeof(tsMsg_t)); pos++){
 
             uint8_t * tmp = (uint8_t*)(line.data() + pos * sizeof(tsMsg_t));
-            if(*tmp != tsProto_Version){
+            /*if(*tmp != tsProto_Version){
                 qDebug() << "Skip msg, cause version wrong";
                 continue;
             }
-
-            tsMsg_t *msg = reinterpret_cast< tsMsg_t *>(tmp);
+            */
+            tsMsg_t *msg = parse_raw_data(tmp);//reinterpret_cast< tsMsg_t *>(tmp);
             if(!msg)
                 continue;
             if(msg->sign != sign_msg(msg)){
@@ -167,8 +165,9 @@ void tsProtoClient::m_readyRead()
             emit latencyChanged(m_latency);
 
             uint32_t maxdT = m_latency * 1.5;
+            maxdT = (maxdT >= 100) ? maxdT : 100;
             if(dt > maxdT){
-                m_maxdT->put(dt * 10);
+                m_maxdT->put(maxdT);
                 qDebug() << "Skip msg: " << (char*)msg->data <<
                             "cause dT exceeded " << maxdT << " - " << dt;
                 continue;
@@ -183,15 +182,13 @@ void tsProtoClient::m_readyRead()
             }
 
         }
-        //qDebug() << line;
-
     }
 }
 
 
 void tsProtoClient::sendMessage(const QString &message)
 {
-    QByteArray text = message.toUtf8() + '\n';
+    QByteArray text = message.toUtf8();
     socket->write(text);
 }
 

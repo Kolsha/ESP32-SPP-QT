@@ -49,6 +49,8 @@ uint8_t sign_msg(tsMsg_t *msg);
 
 void prepare_msg(tsMsg_t *msg);
 
+tsMsg_t *parse_raw_data(uint8_t *data);
+
 
 #ifdef __cplusplus
 }
