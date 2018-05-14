@@ -10,11 +10,15 @@
 #include <qbluetoothlocaldevice.h>
 
 #include <QTimer>
+#include <QMessageBox>
 
 #include <QDebug>
 
 // this Uuid is hardcoded in ESP32
 static const QLatin1String serviceUuid("00001101-0000-1000-8000-00805f9b34fb");
+
+
+//! [Ui methods]
 
 Chat::Chat(QWidget *parent)
     : QDialog(parent),  currentAdapterIndex(0), ui(new Ui_Chat)
@@ -25,6 +29,10 @@ Chat::Chat(QWidget *parent)
     connect(ui->quitButton, SIGNAL(clicked()), this, SLOT(accept()));
     connect(ui->connectButton, SIGNAL(clicked()), this, SLOT(connectClicked()));
     connect(ui->sendButton, SIGNAL(clicked()), this, SLOT(sendClicked()));
+
+     connect(ui->addActionButton, SIGNAL(clicked()), this, SLOT(addActionClicked()));
+
+
 
     //! [Construct UI]
 
@@ -58,8 +66,82 @@ Chat::Chat(QWidget *parent)
     m_executeTimer->setInterval(100);
     m_executeTimer->start();
 
-
 }
+
+QGroupBox *Chat::createWidgetForDevice(const QString &name)
+{
+    QGroupBox *res = new QGroupBox(this);
+    if(!res)
+        return nullptr;
+
+    res->setTitle(name);
+    QLineEdit *edit = new QLineEdit(res);
+    if(!edit){
+        res->deleteLater();
+        return nullptr;
+    }
+    /*QPushButton *btn = new QPushButton(res);
+    btn->setText("X");
+    */
+
+    QVBoxLayout *vbox = new QVBoxLayout;
+    vbox->addWidget(edit);
+    //vbox->addWidget(btn);
+    vbox->addStretch(1);
+    res->setLayout(vbox);
+
+
+    return res;
+}
+
+void Chat::setInputTextForDevice(const QString &addr, const QString &text)
+{
+    QMap<QString, QGroupBox *>::iterator it = clients_widget.find(addr);
+    if(it != clients_widget.end()){
+        QGroupBox *widget = it.value();
+        widget->findChild<QLineEdit*>()->setText(text);
+    }
+}
+
+QString Chat::getInputTextForDevice(const QString &addr)
+{
+    QMap<QString, QGroupBox *>::iterator it = clients_widget.find(addr);
+    if(it != clients_widget.end()){
+        QGroupBox *widget = it.value();
+        return widget->findChild<QLineEdit*>()->text();
+    }
+
+    return QString();
+}
+
+
+int Chat::adapterFromUserSelection() const
+{
+    int result = 0;
+    QBluetoothAddress newAdapter = localAdapters.at(0).address();
+
+    if (ui->secondAdapter->isChecked()) {
+        newAdapter = localAdapters.at(1).address();
+        result = 1;
+    }
+    return result;
+}
+
+
+void Chat::newAdapterSelected()
+{
+    const int newAdapterIndex = adapterFromUserSelection();
+    if (currentAdapterIndex != newAdapterIndex) {
+
+        currentAdapterIndex = newAdapterIndex;
+        const QBluetoothHostInfo info = localAdapters.at(currentAdapterIndex);
+        QBluetoothLocalDevice adapter(info.address());
+        adapter.setHostMode(QBluetoothLocalDevice::HostDiscoverable);
+        localName = info.name();
+    }
+}
+
+
 
 Chat::~Chat()
 {
@@ -110,44 +192,13 @@ void Chat::clientConnected(const QString &name, const QString &addr)
     tsProtoClient *client = qobject_cast<tsProtoClient *>(sender());
     if (client) {
         clients.insert(addr, client);
-    }
-
-    cmdInfo cmd;
-    cmd.cmd = "Test suka";
-    cmd.conds.insert(addr, "btn_boot");
-    cmds.push_back(cmd);
-}
-
-void Chat::showLatency(const uint32_t latency)
-{
-    ui->quitButton->setText(QString("Latency: %1").arg(latency));
-}
-
-void Chat::newAdapterSelected()
-{
-    const int newAdapterIndex = adapterFromUserSelection();
-    if (currentAdapterIndex != newAdapterIndex) {
-
-        currentAdapterIndex = newAdapterIndex;
-        const QBluetoothHostInfo info = localAdapters.at(currentAdapterIndex);
-        QBluetoothLocalDevice adapter(info.address());
-        adapter.setHostMode(QBluetoothLocalDevice::HostDiscoverable);
-        localName = info.name();
+        QGroupBox * widget = createWidgetForDevice(name);
+        if(widget){
+            clients_widget.insert(addr, widget);
+            ui->deviceLayout->insertWidget(0, widget);
+        }
     }
 }
-
-int Chat::adapterFromUserSelection() const
-{
-    int result = 0;
-    QBluetoothAddress newAdapter = localAdapters.at(0).address();
-
-    if (ui->secondAdapter->isChecked()) {
-        newAdapter = localAdapters.at(1).address();
-        result = 1;
-    }
-    return result;
-}
-
 
 void Chat::clientDisconnected(const QString &addr)
 {
@@ -155,9 +206,29 @@ void Chat::clientDisconnected(const QString &addr)
     if (client) {
         Q_ASSERT(!addr.isEmpty());
         clients.remove(addr);
+        clients_widget.remove(addr);
         client->deleteLater();
     }
 }
+
+void Chat::showMessage(const QString &sender, const QString &message)
+{
+    messages.insert(sender, message);
+    setInputTextForDevice(sender, message);
+}
+
+void Chat::showLatency(const uint32_t latency)
+{
+    ui->quitButton->setText(QString("Latency: %1").arg(latency));
+}
+
+
+
+
+
+
+
+
 
 
 
@@ -220,11 +291,30 @@ void Chat::sendClicked()
     ui->sendButton->setEnabled(true);
 }
 
-
-
-
-void Chat::showMessage(const QString &sender, const QString &message)
+void Chat::addActionClicked()
 {
-    messages.insert(sender, message);
+    if(ui->cmdLineEdit->text().isEmpty()){
+        QMessageBox::warning(this, "Warning", "Cmd can't be empty");
+        return;
+    }
+
+    cmdInfo cmd;
+    for (auto it = clients_widget.begin(); it != clients_widget.end(); ++it){
+        //qDebug() << it.key() << ": " << it.value() << endl;
+        QString tmp = it.value()->findChild<QLineEdit*>()->text();
+        if(tmp.isEmpty())
+            continue;
+        cmd.conds.insert(it.key(), tmp);
+    }
+    if(cmd.conds.isEmpty()){
+        QMessageBox::information(this, "Warning", "All client cmd is empty");
+        return;
+    }
+
+    cmd.cmd = ui->cmdLineEdit->text();
+    cmds.push_back(cmd);
+    ui->cmdLineEdit->clear();
 }
+
+
 

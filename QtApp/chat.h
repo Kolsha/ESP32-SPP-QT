@@ -77,6 +77,8 @@ private slots:
     void connectClicked();
     void sendClicked();
 
+    void addActionClicked();
+
     void showMessage(const QString &sender, const QString &message);
 
 
@@ -88,11 +90,19 @@ private slots:
     void newAdapterSelected();
 
 private:
+
+    QGroupBox *createWidgetForDevice(const QString &name);
+
+    void setInputTextForDevice(const QString &addr, const QString &text);
+    QString getInputTextForDevice(const QString &addr);
+
     int adapterFromUserSelection() const;
     int currentAdapterIndex;
     Ui_Chat *ui;
 
-    QMap<QString, tsProtoClient*> clients; //addr client
+    QMap<QString, tsProtoClient*> clients; // addr, client
+
+    QMap<QString, QGroupBox *> clients_widget; // addr, widget
 
     QMap<QString, QString> messages; // addr, message
 
