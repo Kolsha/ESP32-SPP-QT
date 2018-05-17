@@ -64,6 +64,7 @@ private:
     QMap<QString, QGroupBox *> clients_widget; // addr, widget
 
     QMap<QString, QString> messages; // addr, message
+    QMutex msgs_mutex;
 
     QVector<cmdInfo> cmds;
 

@@ -176,6 +176,8 @@ void Chat::executeTime()
         return ;
     }
 
+    QMutexLocker locker(&msgs_mutex);
+
     foreach (const cmdInfo &cmd, cmds) {
         bool cond = true;
         for (auto it = cmd.conds.begin(); it != cmd.conds.end(); ++it){
@@ -227,6 +229,7 @@ void Chat::clientDisconnected(const QString &addr)
 
 void Chat::showMessage(const QString &sender, const QString &message)
 {
+    QMutexLocker locker(&msgs_mutex);
     messages.insert(sender, message);
     setInputTextForDevice(sender, message);
 }
