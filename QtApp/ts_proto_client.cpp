@@ -162,7 +162,7 @@ void tsProtoClient::m_readyRead()
             uint32_t dt = get_ts_delta_time(&curTime, &(msg->timestamp));
             m_maxdT->put(dt);
             m_latency = m_maxdT->getAverage();
-            emit latencyChanged(m_latency);
+            emit latencyChanged(m_addr, m_latency);
 
             uint32_t maxdT = m_latency * 1.5;
             maxdT = (maxdT >= 100) ? maxdT : 100;

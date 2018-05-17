@@ -93,7 +93,7 @@ signals:
     void messageReceived(const QString &sender, const QString &message);
     void connected(const QString &name, const QString &addr);
     void disconnected(const QString &addr);
-    void latencyChanged(const uint32_t latency);
+    void latencyChanged(const QString &addr, const uint32_t latency);
 
 private slots:
     void syncTime();

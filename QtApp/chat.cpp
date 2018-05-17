@@ -1,8 +1,3 @@
-
-#include "chat.h"
-#include "remoteselector.h"
-#include "ts_proto_client.h"
-
 #include <qbluetoothuuid.h>
 #include <qbluetoothserver.h>
 #include <qbluetoothservicediscoveryagent.h>
@@ -12,7 +7,12 @@
 #include <QTimer>
 #include <QMessageBox>
 
+#include <QLabel>
 #include <QDebug>
+
+#include "chat.h"
+#include "remoteselector.h"
+#include "ts_proto_client.h"
 
 // this Uuid is hardcoded in ESP32
 static const QLatin1String serviceUuid("00001101-0000-1000-8000-00805f9b34fb");
@@ -80,15 +80,29 @@ QGroupBox *Chat::createWidgetForDevice(const QString &name)
         res->deleteLater();
         return nullptr;
     }
-    /*QPushButton *btn = new QPushButton(res);
-    btn->setText("X");
-    */
 
-    QVBoxLayout *vbox = new QVBoxLayout;
-    vbox->addWidget(edit);
-    //vbox->addWidget(btn);
-    vbox->addStretch(1);
-    res->setLayout(vbox);
+
+    QLabel *lbl = new QLabel(res);
+    if(!lbl){
+        res->deleteLater();
+        edit->deleteLater();
+        return nullptr;
+    }
+    lbl->setText("Latency: 0");
+
+
+
+
+    QGridLayout *gridbox = new QGridLayout;
+    if(!gridbox){
+        res->deleteLater();
+        edit->deleteLater();
+        lbl->deleteLater();
+        return nullptr;
+    }
+    gridbox->addWidget(edit, 0, 0);
+    gridbox->addWidget(lbl, 1, 0);
+    res->setLayout(gridbox);
 
 
     return res;
@@ -217,11 +231,14 @@ void Chat::showMessage(const QString &sender, const QString &message)
     setInputTextForDevice(sender, message);
 }
 
-void Chat::showLatency(const uint32_t latency)
+void Chat::showLatency(const QString &addr, const uint32_t latency)
 {
-    ui->quitButton->setText(QString("Latency: %1").arg(latency));
+    QMap<QString, QGroupBox *>::iterator it = clients_widget.find(addr);
+    if(it != clients_widget.end()){
+        QGroupBox *widget = it.value();
+        widget->findChild<QLabel*>()->setText(QString("Latency: %1").arg(latency));
+    }
 }
-
 
 
 
@@ -236,7 +253,6 @@ void Chat::connectClicked()
 {
     ui->connectButton->setEnabled(false);
 
-    // scan for services
     const QBluetoothAddress adapter = localAdapters.isEmpty() ?
                 QBluetoothAddress() :
                 localAdapters.at(currentAdapterIndex).address();
@@ -257,8 +273,8 @@ void Chat::connectClicked()
         connect(client, SIGNAL(messageReceived(QString,QString)),
                 this, SLOT(showMessage(QString,QString)));
 
-        connect(client, SIGNAL(latencyChanged(uint32_t)),
-                this, SLOT(showLatency(uint32_t)));
+        connect(client, SIGNAL(latencyChanged(QString, uint32_t)),
+                this, SLOT(showLatency(QString, uint32_t)));
 
         connect(client, SIGNAL(disconnected(QString)), this, SLOT(clientDisconnected(QString)));
 
@@ -300,11 +316,12 @@ void Chat::addActionClicked()
 
     cmdInfo cmd;
     for (auto it = clients_widget.begin(); it != clients_widget.end(); ++it){
-        //qDebug() << it.key() << ": " << it.value() << endl;
+
         QString tmp = it.value()->findChild<QLineEdit*>()->text();
         if(tmp.isEmpty())
             continue;
         cmd.conds.insert(it.key(), tmp);
+
     }
     if(cmd.conds.isEmpty()){
         QMessageBox::information(this, "Warning", "All client cmd is empty");
