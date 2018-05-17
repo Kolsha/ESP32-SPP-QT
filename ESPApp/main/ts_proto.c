@@ -105,3 +105,15 @@ void prepare_msg(tsMsg_t *msg)
     msg->version = tsProto_Version;
     msg->sign = sign_msg(msg);
 }
+
+tsMsg_t *parse_raw_data(uint8_t *data)
+{
+    if(data[0] != tsProto_Version)
+        return NULL;
+    tsMsg_t *msg = (tsMsg_t *) data;
+
+    if(msg->sign != sign_msg(msg))
+        return NULL;
+
+    return msg;
+}

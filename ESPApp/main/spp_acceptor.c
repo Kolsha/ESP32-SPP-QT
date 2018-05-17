@@ -2,7 +2,8 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
-
+#include <sys/time.h>
+#include <time.h>
 #include <driver/gpio.h>
 
 #include "nvs.h"
@@ -20,14 +21,10 @@
 #include "esp_bt_device.h"
 #include "esp_spp_api.h"
 
-#include "time.h"
-#include <sys/time.h>
-
 #include "ts_proto.h"
 
 
 
-#define MSG_IN_QUEUE_SIZE 10
 
 #define SPP_TAG "SPP_SLAVE"
 #define SPP_SERVER_NAME "SPP_SERVER"
@@ -41,12 +38,9 @@ static const esp_spp_role_t role_slave = ESP_SPP_ROLE_SLAVE;
 
 uint32_t bt_handle = 0;
 
+#define MSG_IN_QUEUE_SIZE 10
 static xQueueHandle msg_in_queue = NULL;
-
 static xQueueHandle btn_boot_queue = NULL ;
-
-
-
 
 
 static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
@@ -81,13 +75,12 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
     case ESP_SPP_DATA_IND_EVT:
     {
 
-        /*ESP_LOGI(SPP_TAG, "ESP_SPP_DATA_IND_EVT len=%d handle=%d",
-                 param->data_ind.len, param->data_ind.handle);
-        */
-        if(param->data_ind.data[0] != tsProto_Version) {
-            ESP_LOGI(SPP_TAG, "tsProto_Version mismatch");
+
+        if(parse_raw_data(param->data_ind.data) == NULL){
+            ESP_LOGI(SPP_TAG, "bad message, skip it");
             break;
         }
+
         tsMsg_t *msg_buff = (tsMsg_t *)malloc(param->data_ind.len * sizeof(uint8_t));
         if(msg_buff == NULL) {
             ESP_LOGE(SPP_TAG, "%s malloc failed\n", __func__);
@@ -98,26 +91,19 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
 
 
         xQueueSend(msg_in_queue, &msg_buff, (10 / portTICK_PERIOD_MS) );
-
-        //ESP_LOGI(SPP_TAG, "HANDLE: %d", param->data_ind.handle);
     }
-
-        //esp_spp_write(param->data_ind.handle, SPP_DATA_LEN, spp_data);
     break;
     case ESP_SPP_CONG_EVT:
         //ESP_LOGI(SPP_TAG, "ESP_SPP_CONG_EVT");
         break;
     case ESP_SPP_WRITE_EVT:
         //ESP_LOGI(SPP_TAG, "ESP_SPP_WRITE_EVT");
-        //esp_spp_write(param->srv_open.handle, SPP_DATA_LEN, spp_data);
         break;
     case ESP_SPP_SRV_OPEN_EVT:
         ESP_LOGI(SPP_TAG, "ESP_SPP_SRV_OPEN_EVT");
-        //ESP_LOGI(SPP_TAG, "HANDLE: %d", param->srv_open.handle);
         if(!bt_handle) {
             bt_handle = param->srv_open.handle;
         } else {
-            //esp_spp_write(param->srv_open.handle, sizeof(SPP_BUSY_MSG), (uint8_t *)SPP_BUSY_MSG);
             esp_spp_disconnect(param->srv_open.handle);
         }
         break;
@@ -154,9 +140,6 @@ void app_send_msg(tsProtoCmds_t cmd, uint8_t * data) {
 
 
 
-
-
-
 void app_check_incoming_msg() {
 
     tsMsg_t * msg = NULL;
@@ -180,8 +163,6 @@ void app_check_incoming_msg() {
         struct timeval tv;
         gettimeofday(&tv, NULL);
 
-        //printf ("%ld.%06ld\n", tv.tv_sec, tv.tv_usec);
-
         tv.tv_sec = msg->timestamp.tv_sec;
         tv.tv_usec = msg->timestamp.tv_usec;
 
@@ -189,7 +170,6 @@ void app_check_incoming_msg() {
             break;
         }
         app_send_msg(timeSyncResponse, NULL);
-        //app_enqueue_msg(timeSyncResponse, NULL);
 
     }
 
@@ -232,8 +212,6 @@ void app_logic_task(void *pvParameters)
         app_check_incoming_msg();
 
         if(!!xQueueReceive(btn_boot_queue, &gpio, 1 / portTICK_PERIOD_MS)) {
-            //tsTime_t tm = get_ts_time();
-            //sprintf((char*)info, "%" PRIu64 ".%" PRIu64 "\n", tm.tv_sec, tm.tv_usec);
             app_send_msg(dataOut, info);
         }
 
@@ -342,12 +320,8 @@ void app_main()
         return;
     }
 
-
-
     init_btn_boot();
 
-
     xTaskCreatePinnedToCore(&app_logic_task, "app_logic_task", 2048, NULL, 5, NULL, 1);
-
 }
 
