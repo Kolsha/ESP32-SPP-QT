@@ -50,7 +50,7 @@ private slots:
 
 private:
 
-    QGroupBox *createWidgetForDevice(const QString &name);
+    QGroupBox *createWidgetForDevice(const QString &name, const QString &addr);
 
     void setInputTextForDevice(const QString &addr, const QString &text);
     QString getInputTextForDevice(const QString &addr);

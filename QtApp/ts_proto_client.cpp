@@ -204,6 +204,10 @@ void tsProtoClient::m_connected()
 void tsProtoClient::m_disconnected()
 {
     freeTimer();
-    emit disconnected(socket->peerAddress().toString());
+    emit disconnected(m_addr);
+
+    m_name.clear();
+    m_addr.clear();
+
 }
 

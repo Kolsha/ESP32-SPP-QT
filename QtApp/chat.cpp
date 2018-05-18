@@ -30,7 +30,7 @@ Chat::Chat(QWidget *parent)
     connect(ui->connectButton, SIGNAL(clicked()), this, SLOT(connectClicked()));
     connect(ui->sendButton, SIGNAL(clicked()), this, SLOT(sendClicked()));
 
-     connect(ui->addActionButton, SIGNAL(clicked()), this, SLOT(addActionClicked()));
+    connect(ui->addActionButton, SIGNAL(clicked()), this, SLOT(addActionClicked()));
 
 
 
@@ -68,44 +68,42 @@ Chat::Chat(QWidget *parent)
 
 }
 
-QGroupBox *Chat::createWidgetForDevice(const QString &name)
+QGroupBox *Chat::createWidgetForDevice(const QString &name, const QString &addr)
 {
-    QGroupBox *res = new QGroupBox(this);
-    if(!res)
-        return nullptr;
+    try{
+        QGroupBox *res = new QGroupBox(this);
+        res->setTitle(name);
 
-    res->setTitle(name);
-    QLineEdit *edit = new QLineEdit(res);
-    if(!edit){
-        res->deleteLater();
-        return nullptr;
+        QLineEdit *edit = new QLineEdit(res);
+
+        QLabel *lbl = new QLabel(res);
+        lbl->setText("Latency: 0");
+
+        QPushButton *btn = new QPushButton(res);
+        btn->setText("x");
+        btn->setToolTip(addr);
+
+        connect(btn, &QPushButton::clicked, this, [=]{
+            auto it = this->clients.find(btn->toolTip());
+            if(it != this->clients.end()){
+                it.value()->stopClient();
+            }
+        }
+        );
+
+        QGridLayout *gridbox = new QGridLayout;
+        gridbox->addWidget(edit, 0, 0);
+        gridbox->addWidget(lbl, 1, 0);
+        gridbox->addWidget(btn, 1, 1);
+
+        res->setLayout(gridbox);
+        return res;
+    }
+    catch(...){
+
     }
 
-
-    QLabel *lbl = new QLabel(res);
-    if(!lbl){
-        res->deleteLater();
-        edit->deleteLater();
-        return nullptr;
-    }
-    lbl->setText("Latency: 0");
-
-
-
-
-    QGridLayout *gridbox = new QGridLayout;
-    if(!gridbox){
-        res->deleteLater();
-        edit->deleteLater();
-        lbl->deleteLater();
-        return nullptr;
-    }
-    gridbox->addWidget(edit, 0, 0);
-    gridbox->addWidget(lbl, 1, 0);
-    res->setLayout(gridbox);
-
-
-    return res;
+    return nullptr;
 }
 
 void Chat::setInputTextForDevice(const QString &addr, const QString &text)
@@ -181,7 +179,7 @@ void Chat::executeTime()
     foreach (const cmdInfo &cmd, cmds) {
         bool cond = true;
         for (auto it = cmd.conds.begin(); it != cmd.conds.end(); ++it){
-            //qDebug() << it.key() << ": " << it.value() << endl;
+
             auto msg = messages.find(it.key());
             if(msg == messages.end() || msg.value() != it.value()){
                 cond = false;
@@ -204,11 +202,12 @@ void Chat::executeTime()
 
 void Chat::clientConnected(const QString &name, const QString &addr)
 {
-    ui->chat->insertPlainText(QString::fromLatin1("Joined chat with %1.\n").arg(name));
+    Q_ASSERT(!addr.isEmpty());
+    ui->chat->insertPlainText(QString::fromLatin1("Connected: %1.\n").arg(name));
     tsProtoClient *client = qobject_cast<tsProtoClient *>(sender());
     if (client) {
         clients.insert(addr, client);
-        QGroupBox * widget = createWidgetForDevice(name);
+        QGroupBox * widget = createWidgetForDevice(name, addr);
         if(widget){
             clients_widget.insert(addr, widget);
             ui->deviceLayout->insertWidget(0, widget);
@@ -218,11 +217,18 @@ void Chat::clientConnected(const QString &name, const QString &addr)
 
 void Chat::clientDisconnected(const QString &addr)
 {
+    Q_ASSERT(!addr.isEmpty());
     tsProtoClient *client = qobject_cast<tsProtoClient *>(sender());
     if (client) {
-        Q_ASSERT(!addr.isEmpty());
+        ui->chat->insertPlainText(QString::fromLatin1("Disconnected: %1.\n").arg(client->getName()));
         clients.remove(addr);
-        clients_widget.remove(addr);
+
+        auto it_widget = clients_widget.find(addr);
+        if(it_widget != clients_widget.end()){
+            ui->deviceLayout->removeWidget(it_widget.value());
+            it_widget.value()->deleteLater();
+            clients_widget.remove(addr);
+        }
         client->deleteLater();
     }
 }
