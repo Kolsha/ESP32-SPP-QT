@@ -23,17 +23,22 @@ class RemoteSelector : public QDialog
     Q_OBJECT
 
 public:
-    explicit RemoteSelector(const QBluetoothAddress &localAdapter, QWidget *parent = 0);
+    explicit RemoteSelector(QWidget *parent = 0);
     ~RemoteSelector();
 
-    void startDiscovery(const QBluetoothUuid &uuid);
+    void startDiscovery();
     void stopDiscovery();
     QBluetoothServiceInfo service() const;
+
+    void setUuid(const QBluetoothUuid &uuid);
+    void setAdapter(const QBluetoothAddress &localAdapter);
 
 private:
     Ui::RemoteSelector *ui;
 
-    QBluetoothServiceDiscoveryAgent *m_discoveryAgent;
+    QBluetoothUuid m_uuid;
+    QBluetoothAddress m_localAdapter;
+    QBluetoothServiceDiscoveryAgent *m_discoveryAgent = nullptr;
     QBluetoothServiceInfo m_service;
     QMap<QListWidgetItem *, QBluetoothServiceInfo> m_discoveredServices;
 
@@ -42,6 +47,8 @@ private slots:
     void discoveryFinished();
     void on_remoteDevices_itemActivated(QListWidgetItem *item);
     void on_cancelButton_clicked();
+
+    void on_rescanButton_clicked();
 };
 
 #endif // REMOTESELECTOR_H

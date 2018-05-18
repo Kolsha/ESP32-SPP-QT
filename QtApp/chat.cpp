@@ -221,14 +221,15 @@ void Chat::clientDisconnected(const QString &addr)
     tsProtoClient *client = qobject_cast<tsProtoClient *>(sender());
     if (client) {
         ui->chat->insertPlainText(QString::fromLatin1("Disconnected: %1.\n").arg(client->getName()));
-        clients.remove(addr);
+
 
         auto it_widget = clients_widget.find(addr);
         if(it_widget != clients_widget.end()){
             ui->deviceLayout->removeWidget(it_widget.value());
-            it_widget.value()->deleteLater();
+            delete it_widget.value();
             clients_widget.remove(addr);
         }
+        clients.remove(addr);
         client->deleteLater();
     }
 }
@@ -266,10 +267,17 @@ void Chat::connectClicked()
                 QBluetoothAddress() :
                 localAdapters.at(currentAdapterIndex).address();
 
-    RemoteSelector remoteSelector(adapter);
-    remoteSelector.startDiscovery(QBluetoothUuid(serviceUuid));
-    if (remoteSelector.exec() == QDialog::Accepted) {
-        QBluetoothServiceInfo service = remoteSelector.service();
+    m_remoteSelector.setAdapter(adapter);
+    m_remoteSelector.setUuid(QBluetoothUuid(serviceUuid));
+    m_remoteSelector.startDiscovery();
+    if (m_remoteSelector.exec() == QDialog::Accepted) {
+        QBluetoothServiceInfo service = m_remoteSelector.service();
+
+        if(clients.find(service.device().address().toString()) != clients.end()){
+            qDebug()  << "device already connected, skip it";
+            ui->connectButton->setEnabled(true);
+            return ;
+        }
 
         qDebug() << "Connecting to service 2" << service.serviceName()
                  << "on" << service.device().name();

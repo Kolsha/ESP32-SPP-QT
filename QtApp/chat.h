@@ -8,6 +8,7 @@
 
 #include <QDebug>
 
+#include "remoteselector.h"
 QT_USE_NAMESPACE
 
 class tsProtoClient;
@@ -58,6 +59,8 @@ private:
     int adapterFromUserSelection() const;
     int currentAdapterIndex;
     Ui_Chat *ui;
+
+    RemoteSelector m_remoteSelector;
 
     QMap<QString, tsProtoClient*> clients; // addr, client
 
