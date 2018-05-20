@@ -94,7 +94,7 @@ QGroupBox *Chat::createWidgetForDevice(const QString &name, const QString &addr)
         );
 
         QGridLayout *gridbox = new QGridLayout;
-        gridbox->addWidget(edit, 0, 0);
+        gridbox->addWidget(edit, 0, 0, 0, 0, 0);
         gridbox->addWidget(lbl, 1, 0);
         gridbox->addWidget(btn, 1, 1);
 
