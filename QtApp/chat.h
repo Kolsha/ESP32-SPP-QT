@@ -6,6 +6,8 @@
 #include <qbluetoothsocket.h>
 #include <qbluetoothhostinfo.h>
 
+#include <QMutex>
+
 #include <QDebug>
 
 #include "remoteselector.h"

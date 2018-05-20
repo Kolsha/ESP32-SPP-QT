@@ -40,6 +40,7 @@ typedef struct t_tsMsg
 extern "C" {
 #endif
 
+#include <stddef.h>
 
 tsTime_t get_ts_time();
 

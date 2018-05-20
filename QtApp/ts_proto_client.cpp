@@ -16,11 +16,9 @@ void tsProtoClient::syncTime()
 {
     m_timeIsSynchronized = false;
 
-    tsMsg_t msg = {
-        .timestamp =  get_ts_time(),
-        .cmd = tsProtoCmds_t::timeSyncReq,
-        .data = {"Hello Kolsha"},
-    };
+    tsMsg_t msg;
+    msg.cmd = tsProtoCmds_t::timeSyncReq;
+    msg.timestamp = get_ts_time();
 
     if(msg.timestamp.tv_sec == 0){
         return ;
@@ -136,27 +134,25 @@ void tsProtoClient::m_readyRead()
         for(size_t pos = 0; pos < (line.length() / sizeof(tsMsg_t)); pos++){
 
             uint8_t * tmp = (uint8_t*)(line.data() + pos * sizeof(tsMsg_t));
-            /*if(*tmp != tsProto_Version){
-                qDebug() << "Skip msg, cause version wrong";
-                continue;
-            }
-            */
             tsMsg_t *msg = parse_raw_data(tmp);//reinterpret_cast< tsMsg_t *>(tmp);
+
             if(!msg)
                 continue;
+
             if(msg->sign != sign_msg(msg)){
                 qDebug() << "Skip msg: " << msg->data << "cause sign wrong";
                 continue;
             }
+
             if(msg->cmd == timeSyncResponse){
                 m_timeIsSynchronized = true;
                 m_lastMsgTS = msg->timestamp;
                 continue;
             }
+
             if(!m_timeIsSynchronized){
                 continue;
             }
-
 
 
             uint32_t dt = get_ts_delta_time(&curTime, &(msg->timestamp));

@@ -1,6 +1,7 @@
 #ifndef AVERAGE_BUFFER_H
 #define AVERAGE_BUFFER_H
 
+#include <memory>
 #include <mutex>
 
 template <class T>

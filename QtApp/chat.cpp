@@ -7,6 +7,8 @@
 #include <QTimer>
 #include <QMessageBox>
 
+#include <QMutexLocker>
+
 #include <QLabel>
 #include <QDebug>
 

@@ -4,6 +4,8 @@ QT = core bluetooth widgets
 
 CONFIG += c++11
 
+TARGET = spp_initiator
+
 SOURCES = \
     main.cpp \
     chat.cpp \
