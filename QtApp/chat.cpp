@@ -38,27 +38,7 @@ Chat::Chat(QWidget *parent)
 
     //! [Construct UI]
 
-    localAdapters = QBluetoothLocalDevice::allDevices();
-    if (localAdapters.count() < 2) {
-        ui->localAdapterBox->setVisible(false);
-    } else {
-        //we ignore more than two adapters
-        ui->localAdapterBox->setVisible(true);
-        ui->firstAdapter->setText(tr("Default (%1)", "%1 = Bluetooth address").
-                                  arg(localAdapters.at(0).address().toString()));
-        ui->secondAdapter->setText(localAdapters.at(1).address().toString());
-        ui->firstAdapter->setChecked(true);
-        connect(ui->firstAdapter, SIGNAL(clicked()), this, SLOT(newAdapterSelected()));
-        connect(ui->secondAdapter, SIGNAL(clicked()), this, SLOT(newAdapterSelected()));
-        QBluetoothLocalDevice adapter(localAdapters.at(0).address());
-        adapter.setHostMode(QBluetoothLocalDevice::HostDiscoverable);
-    }
-
-
-
-
-    localName = QBluetoothLocalDevice().name();
-
+    updateLocalAdapters();
 
     m_executeTimer = new QTimer(this);
     if(!m_executeTimer){
@@ -94,7 +74,7 @@ QGroupBox *Chat::createWidgetForDevice(const QString &name, const QString &addr)
         );
 
         QGridLayout *gridbox = new QGridLayout;
-        gridbox->addWidget(edit, 0, 0, 0, 0, 0);
+        gridbox->addWidget(edit, 0, 0, 1, 0);
         gridbox->addWidget(lbl, 1, 0);
         gridbox->addWidget(btn, 1, 1);
 
@@ -153,6 +133,31 @@ void Chat::newAdapterSelected()
         adapter.setHostMode(QBluetoothLocalDevice::HostDiscoverable);
         localName = info.name();
     }
+}
+
+void Chat::updateLocalAdapters()
+{
+    localAdapters = QBluetoothLocalDevice::allDevices();
+    if (localAdapters.count() < 2) {
+        ui->localAdapterBox->setVisible(false);
+    } else {
+        //we ignore more than two adapters
+        ui->localAdapterBox->setVisible(true);
+        ui->firstAdapter->setText(tr("Default (%1)", "%1 = Bluetooth address").
+                                  arg(localAdapters.at(0).address().toString()));
+        ui->secondAdapter->setText(localAdapters.at(1).address().toString());
+        ui->firstAdapter->setChecked(true);
+        connect(ui->firstAdapter, SIGNAL(clicked()), this, SLOT(newAdapterSelected()));
+        connect(ui->secondAdapter, SIGNAL(clicked()), this, SLOT(newAdapterSelected()));
+        QBluetoothLocalDevice adapter(localAdapters.at(0).address());
+        adapter.setHostMode(QBluetoothLocalDevice::HostDiscoverable);
+    }
+
+
+
+
+    localName = QBluetoothLocalDevice().name();
+
 }
 
 
@@ -269,6 +274,13 @@ void Chat::connectClicked()
                 QBluetoothAddress() :
                 localAdapters.at(currentAdapterIndex).address();
 
+    if(adapter.isNull()){
+        QMessageBox::warning(this, "Warning", "Bluetooth adapter not found!");
+        updateLocalAdapters();
+        ui->connectButton->setEnabled(true);
+        return ;
+    }
+
     m_remoteSelector.setAdapter(adapter);
     m_remoteSelector.setUuid(QBluetoothUuid(serviceUuid));
     m_remoteSelector.startDiscovery();
@@ -277,6 +289,7 @@ void Chat::connectClicked()
 
         if(clients.find(service.device().address().toString()) != clients.end()){
             qDebug()  << "device already connected, skip it";
+            QMessageBox::information(this, "Device selector", "Device already connected!");
             ui->connectButton->setEnabled(true);
             return ;
         }

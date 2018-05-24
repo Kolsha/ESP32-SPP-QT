@@ -53,6 +53,7 @@ private slots:
 
 private:
 
+    void updateLocalAdapters();
     QGroupBox *createWidgetForDevice(const QString &name, const QString &addr);
 
     void setInputTextForDevice(const QString &addr, const QString &text);
