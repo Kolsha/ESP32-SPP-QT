@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=SPP Initiator Demo App
+Comment=Demo of Bluetooth SPP with ESP32 and Qt
+Exec=spp_initiator
+Icon=spp_initiator
+Type=Application
+Categories=Development;
